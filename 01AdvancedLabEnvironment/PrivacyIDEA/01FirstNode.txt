@@ -1,0 +1,72 @@
+## Installed Ubuntu 22.04 first
+## SSH to the node
+
+## Become root (dont want to type sudo from time to time)
+sudo -i
+
+## Update your box
+apt update
+apt upgrade -y
+
+
+## Follow the instruction and install PrivacyIDEA
+wget https://lancelot.netknights.it/NetKnights-Release.asc
+apt-key add NetKnights-Release.asc
+add-apt-repository http://lancelot.netknights.it/community/jammy/stable/
+
+apt update
+apt -y install privacyidea-apache2 privacyidea-radius
+
+
+## Add an administrator
+pi-manage admin add piadmin -e admin@localhost
+
+##  Add lines to the config to let the module grab the groups from the DN
+nano /etc/privacyidea/rlm_perl.ini
+
+dir = user
+userAttribute = groups
+regex = CN=(\w*[^,]).*DC=simplelab,DC=int
+
+
+## Add radius client
+nano /etc/freeradius/3.0/clients.conf
+
+client labpf01 {
+       ipaddr          = 10.10.8.2
+       secret          = secret
+
+}
+
+client labpf02 {
+       ipaddr          = 10.10.8.3
+       secret          = secret
+
+}
+
+
+## Stop freeradius and start it in debug mode
+systemctl stop freeradius
+freeradius -X
+(Ctrl + C to exit debug mode)
+
+
+
+## radius testing command - from the documentation
+echo "User-Name=user, User-Password=[Password][OTP]" | radclient -sx localhost auth secret
+
+# For secret is 'testing123', user is 'pfadmin', user is password 'P@111111' and OTP is'654321' the command would be
+echo "User-Name=pfadmin, User-Password=P@111111654321" | radclient -sx localhost auth testing123
+
+
+## generic radius testing command - can check the response
+radtest -t pap user '[Password][OTP]' localhost 1812 secret
+
+# For secret is 'testing123', user is 'pfadmin', user is password 'P@111111' and OTP is'654321' the command would be
+radtest -t pap pfadmin 'P@111111654321' localhost 1812 testing123
+
+# Testing Url
+https://IP/validate/check?user=[user]&pass=[Password][OTP]
+
+# For user is 'pfadmin', user is password 'P@111111' and OTP is'654321'
+https://10.10.8.32/validate/check?user=pfadmin&pass=[Password][OTP]
