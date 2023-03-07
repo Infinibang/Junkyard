@@ -1,0 +1,124 @@
+# Considerations
+https://www.youtube.com/watch?v=R-nXM7dm5Ow # 3 datacenter total 9 nodes / auto failover
+https://galeracluster.com/library/documentation/crash-recovery.html # Crash Recovery
+
+
+
+# Install mariadb and glaera-4 on every node
+apt install -y mariadb-server galera-4
+
+# Preparing some variable for our config files.
+# Fill out the hostname and thier corresponding ip with the same order.
+# Run on all nodes
+
+cluatername="galera"
+dbhosts=("mariadb01" "mariadb02" "mariadb11")
+dbips=("10.10.8.35" "10.10.8.36" "10.11.8.35")
+
+for (( i=0; i<${#dbhosts[@]}; i++)); do
+
+  if [[ "${dbhosts[$i]}" == "$HOSTNAME" ]]; then
+    echo "The index is $i"
+    echo "The ip is ${dbips[$i]}"
+    echo "Storing the ip to /tmp/mariadb_ip"
+    echo -n "${dbips[$i]}" > /tmp/mariadb_ip
+  fi
+
+done
+
+# https://stackoverflow.com/questions/53839253/how-can-i-convert-an-array-into-a-comma-separated-string
+dbips_string="$(IFS=,; echo -n "${dbips[*]}")"
+
+### Gernerate our config files on every node - Start
+
+cat << EOF > /etc/mysql/mariadb.conf.d/60-galera.cnf
+#
+# * Galera-related settings
+#
+# See the examples of server wsrep.cnf files in /usr/share/mysql
+# and read more at https://mariadb.com/kb/en/galera-cluster/
+
+[galera]
+# Mandatory settings
+wsrep_on                 = ON
+wsrep_provider           = /usr/lib/galera/libgalera_smm.so
+wsrep_cluster_name       = "$cluatername"
+wsrep_cluster_address    = "gcomm://$dbips_string"
+binlog_format            = row
+default_storage_engine   = InnoDB
+innodb_autoinc_lock_mode = 2
+innodb_force_primary_key = 1
+innodb_doublewrite       = 1
+
+# Allow server to accept connections on all interfaces.
+bind-address = 0.0.0.0
+
+# Optional settings
+wsrep_slave_threads = 4
+innodb_flush_log_at_trx_commit = 0
+wsrep_node_name                = "$HOSTNAME"
+wsrep_node_address             = "$(cat /tmp/mariadb_ip)"
+
+# By default, MariaDB error logs are sent to journald, which can be hard to digest sometimes.
+# The following line will save error messages to a plain file.
+log_error = /var/log/mysql/error.log
+EOF
+
+### Gernerate our config files on every node - End
+
+
+# Have a peek on the file
+clear
+cat /etc/mysql/mariadb.conf.d/60-galera.cnf
+
+
+# Listen on all IP on every node
+sed -i 's/^bind-address            = 127.0.0.1/bind-address            = 0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf
+cat /etc/mysql/mariadb.conf.d/50-server.cnf | grep bind
+
+
+# Allow cluster node communication on every node
+for (( i=0; i<${#dbips[@]}; i++)); do
+
+  ufw allow from ${dbips[i]}
+
+done
+
+# Configure some rules for accessing the database on every node
+ufw allow 22/tcp
+ufw allow 3306/tcp
+echo y | ufw enable
+
+# Configure apparmor on every node
+systemctl stop mariadb.service
+
+cd /etc/apparmor.d/disable/
+ln -s /etc/apparmor.d/usr.sbin.mariadbd
+systemctl restart apparmor
+
+
+# Primary node
+galera_new_cluster
+
+# Login to mariadb
+mysql -uroot -p
+
+
+# check - 1 only
+show status like 'wsrep_cluster_size';
+
+# Other node
+systemctl restart mariadb
+
+# check again - 3
+show status like 'wsrep_cluster_size';
+
+# check synced
+show status like 'wsrep_local_state_comment';
+
+# show all status
+show status like 'wsrep%';
+
+# HAProxy checking
+# https://mariadb.com/kb/en/haproxy-mysql-check-user-removal/
+CREATE USER 'pftest'@'10.10.8.0/255.255.255.248' IDENTIFIED BY '' WITH MAX_QUERIES_PER_HOUR 1 MAX_UPDATES_PER_HOUR 0 MAX_STATEMENT_TIME 0.0000000001;
