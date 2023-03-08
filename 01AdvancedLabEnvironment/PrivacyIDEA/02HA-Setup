@@ -1,0 +1,144 @@
+### Export the DB from node 1 and import to galera cluster
+# You can can the software from mysql website https://dev.mysql.com/downloads/workbench/
+
+# Since the galera cluster we have don't have the specific charset utf8mb4_0900_ai_ci, we have to replace it with utf8mb4_unicode_ci
+
+Update the 'SQLALCHEMY_DATABASE_URI' in /etc/privacyidea/pi.cfg
+For example, 
+
+From
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://pi:FrGhZ5wOkmXZ@localhost/pi?charset=utf8'
+To
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://dbadmin:P@ssw0rd@10.10.8.1/pi?charset=utf8'
+
+
+### Install PrivayIDEA binary on node 2
+apt update
+apt upgrade -y
+
+wget https://lancelot.netknights.it/NetKnights-Release.asc
+
+apt-key add NetKnights-Release.asc
+add-apt-repository http://lancelot.netknights.it/community/jammy/stable/
+
+apt update
+
+apt -y install privacyidea-apache2 privacyidea-radius
+
+
+### Copy the configuration file from node 1
+
+# Set you node
+node1="10.10.8.32"
+node2="10.10.8.33"
+
+# both nodes - allow root use password to login temporarily
+passwd
+ssh-keygen
+
+echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+systemctl restart sshd
+
+
+# on node1
+ssh-copy-id $node2
+
+# on node2
+ssh-copy-id $node1
+
+# both nodes - disallow root use password to login
+sed -i '/^PermitRootLogin yes/d' /etc/ssh/sshd_config
+systemctl restart sshd
+
+# on node2
+scp $node1:/etc/ssl/certs/privacyideaserver.pem /etc/ssl/certs/privacyideaserver.pem
+scp $node1:/etc/ssl/private/privacyideaserver.key /etc/ssl/private/privacyideaserver.key
+scp $node1:/etc/ssl/certs/privacyideaserverchain.pem /etc/ssl/certs/privacyideaserverchain.pem
+scp $node1:/etc/apache2/sites-enabled/privacyidea.conf /etc/apache2/sites-enabled/privacyidea.conf
+
+scp $node1:/etc/privacyidea/enckey /etc/privacyidea/enckey
+scp $node1:/etc/privacyidea/private.pem /etc/privacyidea/private.pem
+scp $node1:/etc/privacyidea/public.pem /etc/privacyidea/public.pem
+
+scp $node1:/etc/freeradius/3.0/clients.conf /etc/freeradius/3.0/clients.conf
+scp $node1:/etc/privacyidea/ldap-ca.crt /etc/privacyidea/ldap-ca.crt
+scp $node1:/etc/privacyidea/rlm_perl.ini /etc/privacyidea/rlm_perl.ini
+
+
+
+### Configure keepalived
+Remember to replace below attribute's value to suit your need
+notification_email, notification_email_from , smtp_server, interface, auth_pass, virtual_ipaddress 
+
+# node 1
+
+cat > /etc/keepalived/keepalived.conf << EOF
+global_defs {
+  router_id LVS_VIP
+
+  notification_email {
+  davislee@simplelab.int
+  }
+  notification_email_from vip@keepalived.local
+  smtp_server smtp.simplelab.int
+  smtp_connect_timeout 60
+}
+
+vrrp_sync_group VG1 {
+   group {
+      RH_INT
+   }
+}
+
+vrrp_instance RH_INT {
+   state BACKUP
+   interface ens33
+   virtual_router_id 2
+   priority 51
+   nopreempt
+   advert_int 1
+   authentication {
+       auth_type PASS
+       auth_pass passw123
+   }
+   virtual_ipaddress {
+       10.10.8.31
+   }
+}
+EOF
+
+
+# node 2
+cat > /etc/keepalived/keepalived.conf << EOF
+global_defs {
+  router_id LVS_NFS
+ 
+  notification_email {
+  davislee@simplelab.int
+  }
+  notification_email_from nfs@keepalived.local
+  smtp_server smtp.simplelab.int
+  smtp_connect_timeout 60
+}
+ 
+vrrp_sync_group VG1 {
+   group {
+      RH_INT
+   }
+}
+ 
+vrrp_instance RH_INT {
+   state BACKUP
+   interface ens33
+   virtual_router_id 2
+   priority 50
+   advert_int 1
+   authentication {
+       auth_type PASS
+       auth_pass passw123
+   }
+   virtual_ipaddress {
+       10.10.8.31
+   }
+}
+EOF
