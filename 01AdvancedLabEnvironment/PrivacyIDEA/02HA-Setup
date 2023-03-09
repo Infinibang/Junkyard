@@ -75,7 +75,7 @@ scp $node1:/etc/privacyidea/public.pem /etc/privacyidea/public.pem
 scp $node1:/etc/freeradius/3.0/clients.conf /etc/freeradius/3.0/clients.conf
 scp $node1:/etc/privacyidea/ldap-ca.crt /etc/privacyidea/ldap-ca.crt
 scp $node1:/etc/privacyidea/rlm_perl.ini /etc/privacyidea/rlm_perl.ini
-
+scp $node1:/etc/privacyidea/pi.cfg /etc/privacyidea/pi.cfg
 
 
 ### Configure keepalived
