@@ -80,7 +80,10 @@ scp $node1:/etc/privacyidea/pi.cfg /etc/privacyidea/pi.cfg
 
 ### Configure keepalived
 Remember to replace below attribute's value to suit your need
-notification_email, notification_email_from , smtp_server, interface, auth_pass, virtual_ipaddress 
+notification_email, notification_email_from , smtp_server, interface, auth_pass, virtual_ipaddress
+
+# Install the keepalived
+apt -y install keepalived
 
 # node 1
 
@@ -104,7 +107,7 @@ vrrp_sync_group VG1 {
 
 vrrp_instance RH_INT {
    state BACKUP
-   interface ens33
+   interface enp2s1
    virtual_router_id 2
    priority 51
    nopreempt
@@ -119,6 +122,7 @@ vrrp_instance RH_INT {
 }
 EOF
 
+systemctl restart keepalived
 
 # node 2
 cat > /etc/keepalived/keepalived.conf << EOF
@@ -141,7 +145,7 @@ vrrp_sync_group VG1 {
  
 vrrp_instance RH_INT {
    state BACKUP
-   interface ens33
+   interface enp2s1
    virtual_router_id 2
    priority 50
    advert_int 1
@@ -154,3 +158,5 @@ vrrp_instance RH_INT {
    }
 }
 EOF
+
+systemctl restart keepalived
