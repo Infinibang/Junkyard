@@ -40,7 +40,7 @@ apt -y install privacyidea-apache2 privacyidea-radius
 
 ### Copy the configuration file from node 1
 
-# Set you node
+# both nodes - set the node ip
 node1="10.10.8.32"
 node2="10.10.8.33"
 
