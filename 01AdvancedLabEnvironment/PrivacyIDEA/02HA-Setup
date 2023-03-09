@@ -94,7 +94,7 @@ global_defs {
   notification_email {
   davislee@simplelab.int
   }
-  notification_email_from vip@keepalived.local
+  notification_email_from vip@simplelab.int
   smtp_server smtp.simplelab.int
   smtp_connect_timeout 60
 }
@@ -107,7 +107,7 @@ vrrp_sync_group VG1 {
 
 vrrp_instance RH_INT {
    state BACKUP
-   interface enp2s1
+   interface ens33
    virtual_router_id 2
    priority 51
    nopreempt
@@ -122,6 +122,7 @@ vrrp_instance RH_INT {
 }
 EOF
 
+
 systemctl restart keepalived
 
 # node 2
@@ -132,7 +133,7 @@ global_defs {
   notification_email {
   davislee@simplelab.int
   }
-  notification_email_from nfs@keepalived.local
+  notification_email_from nfs@simplelab.int
   smtp_server smtp.simplelab.int
   smtp_connect_timeout 60
 }
@@ -145,7 +146,7 @@ vrrp_sync_group VG1 {
  
 vrrp_instance RH_INT {
    state BACKUP
-   interface enp2s1
+   interface ens33
    virtual_router_id 2
    priority 50
    advert_int 1
@@ -158,5 +159,6 @@ vrrp_instance RH_INT {
    }
 }
 EOF
+
 
 systemctl restart keepalived
