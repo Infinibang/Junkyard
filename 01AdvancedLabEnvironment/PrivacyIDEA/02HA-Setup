@@ -2,7 +2,8 @@
 # You can can the software from mysql website https://dev.mysql.com/downloads/workbench/
 
 # on node 1, update the listening address first
-/etc/mysql/mysql.conf.d/mysqld.cnf
+sed -i 's/^bind-address		= 127.0.0.1/bind-address 		= 0.0.0.0/g' /etc/mysql/mysql.conf.d/mysqld.cnf
+cat /etc/mysql/mysql.conf.d/mysqld.cnf | grep bind
 
 # Since the galera cluster we have don't have the specific charset utf8mb4_0900_ai_ci, we have to replace it with utf8mb4_unicode_ci
 
