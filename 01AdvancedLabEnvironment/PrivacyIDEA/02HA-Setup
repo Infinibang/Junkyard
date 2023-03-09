@@ -5,6 +5,12 @@
 sed -i 's/^bind-address		= 127.0.0.1/bind-address 		= 0.0.0.0/g' /etc/mysql/mysql.conf.d/mysqld.cnf
 cat /etc/mysql/mysql.conf.d/mysqld.cnf | grep bind
 
+mysql -uroot -p
+CREATE USER 'dbadmin'@'%' IDENTIFIED BY 'P@ssw0rd';
+GRANT ALL PRIVILEGES ON *.* TO 'dbadmin'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
+
 # Since the galera cluster we have don't have the specific charset utf8mb4_0900_ai_ci, we have to replace it with utf8mb4_unicode_ci
 
 Update the 'SQLALCHEMY_DATABASE_URI' in /etc/privacyidea/pi.cfg
