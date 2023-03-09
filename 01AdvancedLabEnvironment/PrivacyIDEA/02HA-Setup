@@ -1,6 +1,9 @@
 ### Export the DB from node 1 and import to galera cluster
 # You can can the software from mysql website https://dev.mysql.com/downloads/workbench/
 
+# on node 1, update the listening address first
+/etc/mysql/mysql.conf.d/mysqld.cnf
+
 # Since the galera cluster we have don't have the specific charset utf8mb4_0900_ai_ci, we have to replace it with utf8mb4_unicode_ci
 
 Update the 'SQLALCHEMY_DATABASE_URI' in /etc/privacyidea/pi.cfg
