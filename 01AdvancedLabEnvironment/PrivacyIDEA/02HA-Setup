@@ -9,7 +9,9 @@ mysql -uroot -p
 CREATE USER 'dbadmin'@'%' IDENTIFIED BY 'P@ssw0rd';
 GRANT ALL PRIVILEGES ON *.* TO 'dbadmin'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
+quit
 
+systemctl restart mysql
 
 # Since the galera cluster we have don't have the specific charset utf8mb4_0900_ai_ci, we have to replace it with utf8mb4_unicode_ci
 
