@@ -122,3 +122,11 @@ show status like 'wsrep%';
 # HAProxy checking
 # https://mariadb.com/kb/en/haproxy-mysql-check-user-removal/
 CREATE USER 'pftest'@'10.10.8.0/255.255.255.248' IDENTIFIED BY '' WITH MAX_QUERIES_PER_HOUR 1 MAX_UPDATES_PER_HOUR 0 MAX_STATEMENT_TIME 0.0000000001;
+
+
+# Start first node after the cluster was shutdown gracefully
+galera_new_cluster
+
+# Manual failover - make sure other nodes are shutdown
+mysql -uroot
+SET GLOBAL wsrep_provider_options='pc.bootstrap=true';
